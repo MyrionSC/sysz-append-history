@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
 
+# === Sysz should be wrapped in function like so:
+# sysz () {
+#     history -w; history -c
+#     eval $(which sysz) # for some reason just: sysz kills the shell
+#     history -r
+# }
+HISTFILE=~/.bash_history
+
 set -o pipefail
 shopt -s lastpipe
 shopt -s extglob
@@ -241,7 +249,7 @@ if [[ "$(printf '%s\n' "$MIN_FZF" "$(fzf --version | cut -d' ' -f1)" | sort -V |
   exit 1
 fi
 
-# root doesn't have user units
+# root does not have user units
 if [[ $EUID -eq 0 ]]; then
   MANAGERS=(system)
 else
@@ -543,27 +551,31 @@ if [[ ${#CMDS[@]} -eq 0 ]]; then
 fi
 
 for PICK in "${UNITS[@]}"; do
-
   MANAGER=$(_sysz_manager "$PICK")
   UNIT=${PICK##* }
 
   for CMD in "${CMDS[@]}"; do
     case ${CMD%% *} in
     journal)
-      _sysz_journalctl "$MANAGER" "$UNIT" -xe "${ARGS[@]}"
+      echo journalctl "$MANAGER" -xe "--unit=$UNIT" "${ARGS[@]}" >> $HISTFILE
+      _sysz_journalctl "$MANAGER" -xe "--unit=$UNIT" "${ARGS[@]}"
       ;;
     follow)
-      _sysz_journalctl "$MANAGER" "$UNIT" -xef "${ARGS[@]}"
+      echo journalctl "$MANAGER" -xef "--unit=$UNIT" "${ARGS[@]}" >> $HISTFILE
+      _sysz_journalctl "$MANAGER" -xef "--unit=$UNIT" "${ARGS[@]}"
       ;;
     status)
       # shellcheck disable=2086
+      echo systemctl "$MANAGER" $CMD --no-pager "${ARGS[@]}" -- "$UNIT" >> $HISTFILE
       SYSTEMD_COLORS=1 systemctl "$MANAGER" $CMD --no-pager "${ARGS[@]}" -- "$UNIT"
       ;;
     cat | show)
+      echo systemctl "$MANAGER" "$CMD" "${ARGS[@]}" -- "$UNIT" >> $HISTFILE
       _sysz_systemctl "$MANAGER" "$CMD" "${ARGS[@]}" -- "$UNIT" || exit $?
       ;;
     *)
       # shellcheck disable=2086
+      echo systemctl "$MANAGER" $CMD "${ARGS[@]}" -- "$UNIT" "&&" systemctl "$MANAGER" status --no-pager -- "$UNIT" >> $HISTFILE
       _sysz_systemctl "$MANAGER" $CMD "${ARGS[@]}" -- "$UNIT" || CODE=$?
       SYSTEMD_COLORS=1 systemctl "$MANAGER" status --no-pager -- "$UNIT"
       if [[ ${#UNITS[@]} -eq 1 ]]; then

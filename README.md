@@ -4,6 +4,17 @@ A [fzf](https://github.com/junegunn/fzf) terminal UI for systemctl
 
 <a href="https://console.dev" title="Visit Console - the best tools for developers"><img src="https://console.dev/img/badges/1.0/svg/console-badge-logo-dark.svg" alt="Console - Developer Tool of the Week" /></a>
 
+This is a fork that (tries to) write the chosen command to history, so it can be re-executed rapidly.
+
+Sysz should be wrapped in function like so:
+```
+sysz () {
+    history -w; history -c
+    eval $(which sysz) # for some reason just: sysz kills the shell
+    history -r
+}
+```
+
 # Demo
 
 [![asciicast](https://asciinema.org/a/BLsJz73uF7DdQj7FVGqLPhqCa.svg)](https://asciinema.org/a/BLsJz73uF7DdQj7FVGqLPhqCa)
